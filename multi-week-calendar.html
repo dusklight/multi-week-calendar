@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<!--
+The MIT License (MIT)
+
+Copyright (c) 2015 dusklight
+https://github.com/dusklight/multi-week-calendar
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<head>
+	<title>Multi-Week Calendar</title>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.10.6/moment.min.js" type="text/javascript"></script>
+	<script src="scripts/modernizr-custom-inputtypes.js" type="text/javascript"></script>
+	<script src="scripts/laktek-really-simple-color-picker/jquery.colorPicker.min.js" type="text/javascript"></script>
+	
+	<link rel="stylesheet" type="text/css" href="scripts/laktek-really-simple-color-picker/colorPicker.css" />
+	
+	<style type="text/css">
+		@media print {
+			.no-print, .no-print * {
+				display: none !important;
+			}
+
+			body {
+				margin: 0;
+				padding: 0;
+			}
+		}
+
+		@media screen {
+			div.no-print {
+				padding: 10px 0px 10px 5px;
+				margin-bottom: 5px;
+				border: 0.1em solid #7fff7f;
+				float: left;
+				width: 100%;
+			}
+		}
+
+		body {
+			font-family: Calibri, Arial, sans-serif;
+			background-color: #FFFFFF;
+		}
+
+		h1 {
+			padding: 0px;
+			margin: 0px;
+			font-size: 1.6em;
+		}
+
+		h2 {
+			padding: 0px;
+			margin: 0px;
+			font-size: 1.2em;
+		}
+
+		table.calendar {
+			border-collapse: collapse;
+			border: 0.1em solid #AFAFAF;
+			width: 100%;
+			font-family: Calibri, Arial, sans-serif;
+			font-size: 1em;
+		}
+
+		table.calendar th {
+			background-color: #FFFFD3;
+			border: 0.1em solid #AFAFAF;
+			width: 14.28%;
+			padding: 0.2em 0 0.2em 0;
+		}
+
+		/* Header cells that show the day */
+		table.calendar th.dayHeader {
+			background-color: #CFCFCF;
+			text-align: right;
+			padding-right: 0.3em;
+			font-weight: normal;
+		}
+
+		/* Header cells that show the first day of the month */
+		table.calendar th.firstDayOfTheMonth {
+			font-weight: bold;
+		}
+
+		table.calendar td {
+			border: 0.1em solid #AFAFAF;
+			cursor: pointer;
+		}
+
+		table.calendar td.contentCell {
+			height: 4em;
+		}
+
+		/* Shade Sunday and Saturday columns */
+		table.calendar td:first-child,
+		table.calendar td:last-child {
+			background-color: #EFEFEF;
+		}
+
+		table.calendar td.customShadeCell /* TODO: come up with better naming, such as Special Day? */ {
+			background-color: #DFDFDF;
+		}
+	</style>
+</head>
+<body>
+	<div class="no-print">
+		<h1>Multi-Week Calendar</h1>
+		<em>(Note: this section will be omitted when printed.)</em>
+		<p>
+			Originally inspired by Visio's Multiple Week Calendar shape.
+		</p>
+		<h2>How to Use:</h2>
+		<ul>
+			<li>Enter the desired date range and click the "Render Calendar" button to render the calendar.</li>
+			<li>Optional: Click on a day to shade using the color selected.</li>
+			<li>Use the browser's Print Preview feature to adjust the zoom to fit into a single page. (Enable browser's "background colors/images" option if needed.)</li>
+			<li>Print the calendar.</li>
+		</ul>
+		<h2>Possible TODOs</h2>
+		<ul>
+			<li>Input validation.</li>
+			<li>Add a DatePicker for input boxes (for non-Chrome, or make it same across all browsers?).</li>
+			<li>Allow customizations - colors, fonts, borders, etc.</li>
+			<li>Automatically fit to a single printed page (height).</li>
+			<li>i18l.</li>
+			<li>Separate CSS file?</li>
+		</ul>
+		From: <input type="date" id="startDate" /> To: <input type="date" id="endDate" />
+		<button id="btnRenderCalendar">Render Calendar</button><br />
+		Custom shade color: <input id="colorPicker" name="colorPicker" type="text" value="#DFDFDF" />
+	</div>
+	<table id="mainTable" class="calendar">
+		<thead>
+			<tr>
+				<th>Sunday</th>
+				<th>Monday</th>
+				<th>Tuesday</th>
+				<th>Wednesday</th>
+				<th>Thursday</th>
+				<th>Friday</th>
+				<th>Saturday</th>
+			</tr>
+		</thead>
+		<tbody id="mainTBody"></tbody>
+	</table>
+
+	<script language="javascript">
+
+		function renderCalendar() {
+			$('#mainTBody').empty();
+
+			var startSunday = findStartSunday(moment(new Date($('#startDate').val())));
+			var endSaturday = findEndSaturday(moment(new Date($('#endDate').val())));
+
+			var runningDate = startSunday;
+			while (!runningDate.isAfter(endSaturday)) {
+				runningDate = addWeekRow(runningDate);
+			}
+		}
+
+		function findStartSunday(date) {
+			return date.startOf('week');
+		}
+
+		function findEndSaturday(date) {
+			return date.endOf('week');
+		}
+
+		// Adds a full week row starting from the given date.  Assumes the given date is beginning of the week, i.e., Sunday.
+		function addWeekRow(date) {
+			var row = $('<tr>'); // Or: document.createElement('tr'), then wrap it around jQuery, $(row)
+			var contentRow = $('<tr>');
+
+			for (i = 0; i < 7; i++) {
+				if (date.date() == 1) {
+					row.append('<th class="dayHeader firstDayOfTheMonth">' + date.format('MMMM D') + '</th>');
+				}
+				else {
+					row.append('<th class="dayHeader">' + date.format('D') + '</th>');
+				}
+
+				contentRow.append('<td class="contentCell"></td>');
+
+				date.add(1, 'd');
+			}
+
+			$('#mainTBody').append(row);
+			$('#mainTBody').append(contentRow);
+
+			return date;
+		}
+
+		// Event handler to shade/unshade the content cell when clicked.
+		// (The use of "on" (instead of the deprecated "live") ensures the event handler will work on dynamically generated DOM objects.)
+		$('tbody').on('click', 'td.contentCell', function () {
+			$(this).css("background-color", $('#colorPicker').val());
+		});
+
+		$('#btnRenderCalendar').click(function () {
+			renderCalendar();
+		});
+
+		$(function () {
+			// Chrome has built-in support for HTML5 date input type, and it must be in YYYY-MM-DD format when setting it programmatically.
+			var dateFormat = Modernizr.inputtypes.date ? 'YYYY-MM-DD' : 'MM/DD/YYYY';
+
+			$('#startDate').val(moment().startOf('month').format(dateFormat));
+			$('#endDate').val(moment().add(2, 'M').startOf('month').format(dateFormat));
+
+			$.fn.colorPicker.defaults.colors = ['FFFFFF', 'DFDFDF', 'FFDFDF', 'DFFFDF', 'DFDFFF', 'FFFFDF'];
+			$('#colorPicker').colorPicker();
+
+			renderCalendar();
+		});
+	</script>
+</body>
+</html>
