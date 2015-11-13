@@ -165,11 +165,14 @@ SOFTWARE.
 
 	<script language="javascript">
 
+		var HTML5_DATE_FORMAT = 'YYYY-MM-DD'; // for Chrome
+		var OTHER_DATE_FORMAT = 'MM/DD/YYYY'; // need better name...
+
 		function renderCalendar() {
 			$('#mainTBody').empty();
 
-			var startSunday = findStartSunday(moment(new Date($('#startDate').val())));
-			var endSaturday = findEndSaturday(moment(new Date($('#endDate').val())));
+			var startSunday = findStartSunday(moment($('#startDate').val(), [HTML5_DATE_FORMAT, OTHER_DATE_FORMAT]));
+			var endSaturday = findEndSaturday(moment($('#endDate').val(), [HTML5_DATE_FORMAT, OTHER_DATE_FORMAT]));
 
 			var runningDate = startSunday;
 			while (!runningDate.isAfter(endSaturday)) {
@@ -212,7 +215,7 @@ SOFTWARE.
 		// Event handler to shade/unshade the content cell when clicked.
 		// (The use of "on" (instead of the deprecated "live") ensures the event handler will work on dynamically generated DOM objects.)
 		$('tbody').on('click', 'td.contentCell', function () {
-			$(this).css("background-color", $('#colorPicker').val());
+			$(this).css('background-color', $('#colorPicker').val());
 		});
 
 		$('#btnRenderCalendar').click(function () {
@@ -221,7 +224,7 @@ SOFTWARE.
 
 		$(function () {
 			// Chrome has built-in support for HTML5 date input type, and it must be in YYYY-MM-DD format when setting it programmatically.
-			var dateFormat = Modernizr.inputtypes.date ? 'YYYY-MM-DD' : 'MM/DD/YYYY';
+			var dateFormat = Modernizr.inputtypes.date ? HTML5_DATE_FORMAT : OTHER_DATE_FORMAT;
 
 			$('#startDate').val(moment().startOf('month').format(dateFormat));
 			$('#endDate').val(moment().add(2, 'M').startOf('month').format(dateFormat));
